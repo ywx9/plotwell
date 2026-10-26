@@ -1,0 +1,9 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Default runtime data
+/data/
+
+# Local endpoint credentials
+.env
