@@ -1,13 +1,13 @@
 """Local responsibilities only; no global milestone execution in shared prompts."""
 
 OUTLINE = '''作品と章の構成だけを設計する。本文、セリフ、turnを執筆しない。
-出力は {"story":{"title":"作品名","turn_budget":整数,"opening":"導入の設計",
-"chapters":[{"title":"章名","synopsis":"自己完結した章の概要","turn_budget":正整数,"scenes":[]}],
-"ending":"結末の設計"},"chapter_events":[[イベントID,...],...]}。
+出力は {"story":{"title":"作品名","turn_budget":整数,
+"chapters":[{"title":"章名","synopsis":"自己完結した章の概要","turn_budget":正整数,"scenes":[]}]},
+"chapter_events":[[イベントID,...],...]}。
 全イベントを章順に一度ずつ記載順に割り当てる。イベントのない章は空配列可。
 milestonesは全作品の条件であり各章で全件を繰り返さない。人物を追加しない。
 指定title・turn_budgetを保持。予算未指定なら1〜100を提案。章予算の合計は全体予算に一致。
-openingとendingは構成説明。実際の導入・結末も章に含める。'''
+導入・結末の設計は章のsynopsisに含める。本文は後続工程で章・シーン内のturnとして執筆する。'''
 
 SCENES = '''対象章のシーン構成だけを設計する。本文、セリフ、turnを執筆しない。
 出力は {"scenes":[{"synopsis":"自己完結した概要","turn_budget":正整数,
@@ -27,7 +27,8 @@ knowledge_updatesは後続で必要な新事実だけ。何もなければ空配
 narratorのspeech_styleで地の文を書く。scope.assigned_eventsだけが今のシーンの担当。
 completed_eventsは既に完了しており再演しない。future_eventsは先取りしない。
 global_referenceは参考資料。そこにある全条件を今のシーンで消化せず、作品冒頭から書き直さない。
-continuity_summaryとの接続を守る。描写だけのturnはspeaker・speech・thoughtをnullとする。
+continuity_summaryとの接続を守る。導入・結末の地の文も対象シーン内のnarrationで表す。
+描写だけのturnはspeaker・speech・thoughtをnullとする。
 暫定的に描写も1ターン、narrationは発言前の地の文とする。'''
 
 DRAFT = SCRIPT + '\n初稿のturn_budgetは目安であり厳密な上限ではない。対象の展開を具体的なセリフと地の文で描く。'

@@ -14,7 +14,7 @@ def digest(value):
 
 
 def make_checkpoint(plot, story, directing, chapter_events, scene_events):
-    value = deepcopy({'version': 2, 'plot': plot, 'story': story, 'directing': directing,
+    value = deepcopy({'version': 3, 'plot': plot, 'story': story, 'directing': directing,
                       'chapter_events': chapter_events, 'scene_events': scene_events})
     value['narrator_hash'] = digest(story)
     value['checksum'] = digest(value)
@@ -23,7 +23,7 @@ def make_checkpoint(plot, story, directing, chapter_events, scene_events):
 
 
 def validate_checkpoint(value):
-    require(isinstance(value, dict) and value.get('version') == 2, 'Unsupported narrator checkpoint; regenerate the narrator with the current version')
+    require(isinstance(value, dict) and value.get('version') == 3, 'Unsupported narrator checkpoint; regenerate the narrator with the current version')
     require(value.get('checksum') == digest({k: v for k, v in value.items() if k != 'checksum'}),
             'Narrator checkpoint checksum mismatch')
     require(value.get('narrator_hash') == digest(value['story']), 'Narrator script was changed')
@@ -49,5 +49,13 @@ def read_checkpoint(path):
         if isinstance(event, dict) and event.get('event') == 'narrator_checkpoint':
             checkpoint = formatter.expand(event['checkpoint'])
     require(checkpoint is not None, 'No reusable narrator_checkpoint found in this log')
+    if checkpoint.get('version') == 2:
+        # Verify the original before dropping the obsolete structure descriptions.
+        require(checkpoint.get('checksum') == digest({k: v for k, v in checkpoint.items() if k != 'checksum'}),
+                'Narrator checkpoint checksum mismatch')
+        require(checkpoint.get('narrator_hash') == digest(checkpoint['story']), 'Narrator script was changed')
+        story = {k: v for k, v in checkpoint['story'].items() if k not in ('opening', 'ending')}
+        checkpoint = make_checkpoint(checkpoint['plot'], story, checkpoint['directing'],
+                                     checkpoint['chapter_events'], checkpoint['scene_events'])
     validate_checkpoint(checkpoint)
     return checkpoint

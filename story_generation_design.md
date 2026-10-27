@@ -76,9 +76,7 @@ plot = {
 story = {
     'title': None,
     'turn_budget': None,
-    'opening': None,
     'chapters': [],
-    'ending': None,
 }
 
 chapter = {
@@ -108,12 +106,13 @@ turn = {
 
 | 階層 | 役割 |
 | --- | --- |
-| Story | 作品タイトル、導入、結末、章構成、全体のターン予算。 |
+| Story | 作品タイトル、章構成、全体のターン予算。 |
 | Chapter | 章のタイトル、章全体の概要、シーン構成、章のターン予算。 |
 | Scene | シーンの概要、時間・場所、ターン構成、シーンのターン予算。 |
 | Turn | 発言者、実際のセリフ、内面表現、地の文。 |
 
-`opening` と `ending` の詳細な表現・ターン予算への算入方法、`narration` と `speech` の文章上の前後関係などは未確定とする。
+導入・結末の設計は章・シーンの `synopsis` に含め、実際の文章はシーン内の `turn['narration']` で表す。地の文だけのターンは `speaker`・`speech`・`thought` を `null` とし、通常のターン予算に含める。Storyに独立した `opening`・`ending` は設けない。
+`narration` と `speech` の文章上の前後関係などは未確定とする。
 
 ## 4. 生成手順
 
@@ -178,7 +177,6 @@ turn = {
 
 - `milestones` の順序、必須性、および未指定項目の補完規則。
 - `turn_budget` が未指定の場合の決定方法、作品全体の目標予算からの逸脱をどこまで認めるか。
-- `opening` と `ending` の具体的な形式・扱い。
 - 1ターンにおける `narration` と発言の配置、および発言なしターンの扱い。
 - シーン間の整合性の検証・修復方法。
 - 演技生成の一括方式と逐次方式の品質比較。

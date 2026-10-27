@@ -11,7 +11,7 @@ import urllib.error
 
 from plotwell import prompts
 from plotwell.__main__ import main
-from plotwell.checkpoint import read_checkpoint, validate_checkpoint
+from plotwell.checkpoint import digest, read_checkpoint, validate_checkpoint
 from plotwell.performance import actor_profile
 from plotwell.pipeline import Pipeline, writer_plot
 from plotwell.runtime import LLM, RunLog
@@ -36,7 +36,7 @@ def turn(speaker='A', speech='手紙を挟んでいた。'):
 
 
 def outline():
-    return {'title': 'テスト', 'turn_budget': 12, 'opening': '出会う', 'ending': '別れる',
+    return {'title': 'テスト', 'turn_budget': 12,
             'chapters': [{'title': f'章{i}', 'synopsis': f'章{i}概要', 'turn_budget': 6, 'scenes': []} for i in (1, 2)]}
 
 
@@ -136,6 +136,10 @@ class GenerationTests(unittest.TestCase):
         self.assertNotIn('turnは', prompts.OUTLINE + prompts.SCENES)
         self.assertNotIn('milestones', prompts.ACT)
         schema = planning_schema('1.outline')
+        self.assertEqual(set(schema['properties']['story']['properties']), {'title', 'turn_budget', 'chapters'})
+        for field in ('opening', 'ending'):
+            with self.assertRaises(ValueError):
+                validate_outline({**outline(), field: '旧フィールド'}, PLOT)
         self.assertEqual(schema['properties']['story']['properties']['chapters']['items']['properties']['scenes'], {'const': []})
         schema = planning_schema('2.scenes.1')
         self.assertEqual(schema['properties']['scenes']['items']['properties']['turns'], {'const': []})
@@ -163,9 +167,24 @@ class GenerationTests(unittest.TestCase):
                 self.assertEqual(status, 0)
                 self.assertTrue(all(stage.startswith('7.' + mode + '.') for stage, _, _ in llm.calls))
                 output = json.loads(next((root / mode).glob('*.json')).read_text(encoding='utf-8'))
-                self.assertEqual(set(output), {'title', 'turn_budget', 'opening', 'chapters', 'ending'})
+                self.assertEqual(set(output), {'title', 'turn_budget', 'chapters'})
                 result_log = next((root / mode).glob('*.log'))
                 self.assertEqual(read_checkpoint(result_log), checkpoint)
+
+            legacy = deepcopy(checkpoint)
+            legacy['version'] = 2
+            legacy['story'].update(opening='旧導入の構成説明', ending='旧結末の構成説明')
+            legacy['narrator_hash'] = digest(legacy['story'])
+            legacy['checksum'] = digest({k: v for k, v in legacy.items() if k != 'checksum'})
+            legacy_path = root / 'legacy.log'
+            legacy_path.write_text(json.dumps(PLOT) + '\n' + json.dumps({
+                'event': 'narrator_checkpoint', 'checkpoint': legacy}) + '\n', encoding='utf-8')
+            self.assertEqual(read_checkpoint(legacy_path), checkpoint)
+            legacy['story']['opening'] = '改ざん'
+            legacy_path.write_text(json.dumps(PLOT) + '\n' + json.dumps({
+                'event': 'narrator_checkpoint', 'checkpoint': legacy}) + '\n', encoding='utf-8')
+            with self.assertRaisesRegex(ValueError, 'checksum mismatch'):
+                read_checkpoint(legacy_path)
 
     def test_multiple_chapters_events_budgets_knowledge_and_replay(self):
         with tempfile.TemporaryDirectory() as directory:

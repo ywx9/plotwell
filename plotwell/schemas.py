@@ -12,8 +12,8 @@ def planning_schema(stage):
     groups = {'type': 'array', 'items': {'type': 'array', 'items': {'type': 'integer', 'minimum': 0}}}
     if stage == '1.outline':
         chapter = obj({'title': string, 'synopsis': string, 'turn_budget': integer, 'scenes': empty})
-        story = obj({'title': string, 'turn_budget': integer, 'opening': string,
-                     'chapters': {'type': 'array', 'minItems': 1, 'items': chapter}, 'ending': string})
+        story = obj({'title': string, 'turn_budget': integer,
+                     'chapters': {'type': 'array', 'minItems': 1, 'items': chapter}})
         return obj({'story': story, 'chapter_events': groups})
     if stage.startswith('2.scenes.'):
         scene = obj({'synopsis': string, 'turn_budget': integer, 'time_point': string,

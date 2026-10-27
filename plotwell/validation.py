@@ -72,9 +72,8 @@ def validate_turns(value, characters, count=None):
 
 
 def validate_outline(story, plot):
-    keys(story, 'title turn_budget opening chapters ending')
-    for field in ('title', 'opening', 'ending'):
-        text(story[field], field)
+    keys(story, 'title turn_budget chapters')
+    text(story['title'], 'title')
     if plot.get('title'):
         require(story['title'] == plot['title'], 'Keep the requested title')
     positive(story['turn_budget'], 'story.turn_budget')
