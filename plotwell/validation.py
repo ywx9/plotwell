@@ -23,12 +23,13 @@ def positive(value, name):
 
 def validate_plot(plot):
     require(isinstance(plot, dict), 'plot must be an object')
-    require(not (set(plot) - {'title', 'premise', 'turn_budget', 'milestones', 'characters'}),
+    require(not (set(plot) - {'title', 'premise', 'target_turns', 'milestones', 'characters', 'language'}),
             'Unknown plot fields')
+    text(plot.get('language', 'Japanese'), 'language')
     for field in ('title', 'premise'):
         text(plot.get(field), field, nullable=True)
-    if plot.get('turn_budget') is not None:
-        positive(plot['turn_budget'], 'turn_budget')
+    if plot.get('target_turns') is not None:
+        positive(plot['target_turns'], 'target_turns')
     milestones = plot.get('milestones', [])
     require(isinstance(milestones, list), 'milestones must be a list')
     for milestone in milestones:
@@ -69,40 +70,41 @@ def validate_turns(value, characters, count=None):
         if turn['speaker'] in (None, 'narrator'):
             require(not turn['speech'] and not turn['thought'],
                     'Narration-only turn must have empty speech and thought')
+        else:
+            validate_performance({field: turn[field] for field in ('speech', 'thought')})
 
 
 def validate_outline(story, plot):
-    keys(story, 'title turn_budget chapters')
+    keys(story, 'title synopsis target_turns chapters')
+    text(story['synopsis'], 'story.synopsis')
     text(story['title'], 'title')
-    if plot.get('title'):
-        require(story['title'] == plot['title'], 'Keep the requested title')
-    positive(story['turn_budget'], 'story.turn_budget')
-    if plot.get('turn_budget') is None:
-        require(story['turn_budget'] <= 100, 'Proposed turn_budget must be at most 100')
+    positive(story['target_turns'], 'story.target_turns')
+    if plot.get('target_turns') is None:
+        require(story['target_turns'] <= 100, 'Proposed target_turns must be at most 100')
     else:
-        require(story['turn_budget'] == plot['turn_budget'], 'Keep the requested turn_budget')
+        require(story['target_turns'] == plot['target_turns'], 'Keep the requested target_turns')
     require(isinstance(story['chapters'], list) and bool(story['chapters']), 'chapters must be nonempty')
     for chapter in story['chapters']:
-        keys(chapter, 'title synopsis turn_budget scenes')
+        keys(chapter, 'title synopsis target_turns scenes')
         text(chapter['title'], 'chapter.title')
         text(chapter['synopsis'], 'chapter.synopsis')
-        positive(chapter['turn_budget'], 'chapter.turn_budget')
+        positive(chapter['target_turns'], 'chapter.target_turns')
         require(chapter['scenes'] == [], 'Initial scenes must be empty')
-    require(sum(c['turn_budget'] for c in story['chapters']) == story['turn_budget'],
-            'Chapter budgets must sum to story.turn_budget')
+    require(sum(c['target_turns'] for c in story['chapters']) == story['target_turns'],
+            'Chapter budgets must sum to story.target_turns')
 
 
 def validate_scenes(value, budget):
     keys(value, 'scenes')
     require(isinstance(value['scenes'], list) and bool(value['scenes']), 'scenes must be nonempty')
     for scene in value['scenes']:
-        keys(scene, 'synopsis turn_budget time_point location turns')
+        keys(scene, 'synopsis target_turns time_point location turns')
         for field in ('synopsis', 'time_point', 'location'):
             text(scene[field], field)
-        positive(scene['turn_budget'], 'scene.turn_budget')
+        positive(scene['target_turns'], 'scene.target_turns')
         require(scene['turns'] == [], 'Initial turns must be empty')
-    require(sum(s['turn_budget'] for s in value['scenes']) == budget,
-            'Scene budgets must sum to chapter.turn_budget')
+    require(sum(s['target_turns'] for s in value['scenes']) == budget,
+            'Scene budgets must sum to chapter.target_turns')
 
 
 def validate_budgets(value, total, minimums):
@@ -119,7 +121,7 @@ def validate_budgets(value, total, minimums):
 def validate_performance(value):
     keys(value, 'speech thought')
     for field in ('speech', 'thought'):
-        text(value[field], field, nullable=True)
+        text(value[field], field)
 
 
 def validate_assignment(groups, expected, size):
@@ -174,6 +176,6 @@ def validate_final(story, plot):
     validate_outline(outline, plot)
     for chapter in story['chapters']:
         skeletons = [{**s, 'turns': []} for s in chapter['scenes']]
-        validate_scenes({'scenes': skeletons}, chapter['turn_budget'])
+        validate_scenes({'scenes': skeletons}, chapter['target_turns'])
         for scene in chapter['scenes']:
-            validate_turns({'turns': scene['turns']}, plot['characters'], scene['turn_budget'])
+            validate_turns({'turns': scene['turns']}, plot['characters'])

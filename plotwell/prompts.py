@@ -1,51 +1,73 @@
-"""Local responsibilities only; no global milestone execution in shared prompts."""
+"""English instructions for six independent story production stages."""
 
-OUTLINE = '''作品と章の構成だけを設計する。本文、セリフ、turnを執筆しない。
-出力は {"story":{"title":"作品名","turn_budget":整数,
-"chapters":[{"title":"章名","synopsis":"自己完結した章の概要","turn_budget":正整数,"scenes":[]}]},
-"chapter_events":[[イベントID,...],...]}。
-全イベントを章順に一度ずつ記載順に割り当てる。イベントのない章は空配列可。
-milestonesは全作品の条件であり各章で全件を繰り返さない。人物を追加しない。
-指定title・turn_budgetを保持。予算未指定なら1〜100を提案。章予算の合計は全体予算に一致。
-導入・結末の設計は章のsynopsisに含める。本文は後続工程で章・シーン内のturnとして執筆する。'''
+OUTLINE = """You are a professional story developer skilled at building compelling stories from ideas.
+Treat the supplied plot as the user's ideas. Respect character settings, requested length and required events;
+creatively develop unspecified details. Write all generated prose in English. Keep character identifiers unchanged.
+Design only the story and chapters, without dialogue or turns. Return
+{"story":{"title":"English working title","synopsis":"self-contained complete story synopsis",
+"target_turns":1,"chapters":[{"title":"English working title","synopsis":"complete chapter synopsis",
+"target_turns":1,"scenes":[]}]},"chapter_events":[[0]]}.
+Synopses must include the opening, developments, causal connections and ending, including spoilers.
+Assign every event ID exactly once in catalog order across chapters. Empty event groups are allowed.
+Do not repeat all events in each chapter. Do not add characters. Treat a requested title as inspiration;
+final titles will be written later in the requested language. Keep a supplied target_turns;
+otherwise propose 1 to 100. Chapter targets must sum to the story target."""
 
-SCENES = '''対象章のシーン構成だけを設計する。本文、セリフ、turnを執筆しない。
-出力は {"scenes":[{"synopsis":"自己完結した概要","turn_budget":正整数,
-"time_point":"時点","location":"場所","turns":[]}],"scene_events":[[イベントID,...],...]}。
-assigned_eventsだけをシーン順に一度ずつ割り当てる。他章の出来事はこの章で実現しない。
-他章はother_chapter_synopsesだけを参照する。シーン予算の合計は章予算と一致。人物を追加しない。'''
+SCENES = """You are a professional novelist. Develop the scenes for the single supplied chapter
+of the outline you created. Write all generated prose in English; preserve character identifiers.
+Use story_synopsis and other_chapter_synopses for context. Do not generate other chapters or any turns.
+Return {"scenes":[{"synopsis":"self-contained scene synopsis","target_turns":1,
+"time_point":"time","location":"place","turns":[]}],"scene_events":[[0]]}.
+Assign only assigned_events, exactly once and in order. Do not enact events belonging to other chapters.
+Scene targets must sum to the chapter target. Do not add characters."""
 
-SCRIPT = '''脚本家narratorとして対象シーンだけの台本を書く。出力は
-{"turns":[{"speaker":"人物名またはnull","speech":"具体的セリフまたはnull",
-"thought":"平易な感情またはnull","narration":"地の文またはnull"}],
-"continuity_summary":"前の要約を更新した、後続に必要な事実・時間・関係・知識の自己完結した要約。1000文字以内",
-"visibility":[{"witnesses":["そのターンに立ち会う人物名"],"observation":"観測可能な状況だけ。秘密や他者の内面は除く"}],
-"knowledge_updates":[{"turn":0始まり番号,"actor":"見聞きした人物名","subject":"対象人物名","fact":"新たに知った重要な事実"}]}。
-visibilityはturnsと一対一。発言者はwitnessesに含める。入退場に従い、在席しない人物に情報を渡さない。
-knowledge_updatesは後続で必要な新事実だけ。何もなければ空配列。全知の説明や他者のthoughtは知識にしない。
-人物は追加しない。backgroundはnarratorだけの資料。人物固有の発言・思考の文体はまだ適用しない。
-narratorのspeech_styleで地の文を書く。scope.assigned_eventsだけが今のシーンの担当。
-completed_eventsは既に完了しており再演しない。future_eventsは先取りしない。
-global_referenceは参考資料。そこにある全条件を今のシーンで消化せず、作品冒頭から書き直さない。
-continuity_summaryとの接続を守る。導入・結末の地の文も対象シーン内のnarrationで表す。
-描写だけのturnはspeaker・speech・thoughtをnullとする。
-暫定的に描写も1ターン、narrationは発言前の地の文とする。'''
+DRAFT = """You are a professional dramatic scriptwriter. Write the entire supplied scene in one response.
+Write all generated prose in English; preserve character identifiers. Return
+{"turns":[{"speaker":null,"speech":null,"thought":null,"narration":"prose"}],
+"continuity_summary":"updated self-contained summary of facts, time, relationships and knowledge, at most 1000 characters",
+"visibility":[{"witnesses":[],"observation":null}],
+"knowledge_updates":[{"turn":0,"actor":"character ID","subject":"character ID","fact":"newly learned fact"}]}.
+Write concrete dialogue, emotions/inner thoughts and narration. Aim for exactly scene.target_turns turns;
+a different count is acceptable. Do not confuse turns with API output tokens. Do not pad or truncate the story.
+Every character turn must contain both speech and thought as nonempty strings, never null or whitespace-only.
+Speech includes spoken words and nonverbal sounds produced by the character's mouth. Write those sounds
+directly in speech when called for by the scene; do not force them into every turn.
+Do not yet apply character-specific speech or thought styles. Narration is provisional and precedes speech.
+Narration-only turns have null speaker, speech and thought and count as one turn.
+Do not add characters. Character backgrounds are author-only reference, not character knowledge.
+Enact only scope.assigned_events; do not repeat completed_events or preempt future_events.
+Use the story and chapter synopses for context and preserve continuity_summary. Do not restart the story.
+Include the opening and ending within scene turns. visibility must correspond one-to-one with turns.
+Include each speaker among witnesses; respect arrivals and departures. observation contains only observable
+circumstances, never private thoughts or secrets. knowledge_updates contains only important new facts
+actually acquired by witnesses, with zero-based turn indexes. Use an empty list when none are acquired.
+Do not treat omniscient reference information or another character's thoughts as acquired knowledge."""
 
-DRAFT = SCRIPT + '\n初稿のturn_budgetは目安であり厳密な上限ではない。対象の展開を具体的なセリフと地の文で描く。'
+ACT = """You are a professional stage actor portraying the supplied character.
+Rewrite only your assigned speech and thought in language, applying actor.speech_style and actor.thought_style.
+Preserve script facts, questions, answers, promises, refusals, decisions, causality and disclosure timing.
+Do not change speakers, narration, turn order or count. Every assigned turn must contain both speech and
+thought as nonempty strings, never null or whitespace-only. Speech includes spoken words and nonverbal
+sounds produced by the character's mouth. Render those sounds directly in speech when appropriate to
+the script and performance; do not force them into every turn.
+Treat actor.initial_perceptions as initial subjective beliefs; prefer subsequently acquired facts.
+Past thoughts are private. Never use other characters' private thoughts or backgrounds.
+Script reference material is actor preparation, not the character's current knowledge.
+Do not anticipate future revelations. Perform all assigned turns for this scene in one response.
+Return {"performances":[{"turn":0,"speech":"performed utterance","thought":"inner thought"}]} in assigned index order."""
 
-EDIT = SCRIPT + '''
-対象初稿を確定予算と厳密に同じターン数に編集する。変更範囲はこのシーンのturnsだけ。
-末尾切捨てや反復による水増しをせず、展開を圧縮・補強する。重要な事実・因果と前後の接続を保つ。'''
+NARRATION = """You are a professional novelist. Rewrite the narration for every turn of the supplied
+current scene in language, following narrator.speech_style. The scene contains finalized performances
+and provisional English narration. Use the provisional narration and previous continuity_summary to preserve
+physical actions, time, place, relationships, observable emotions and continuity with the finalized dialogue.
+Do not invent new events, disclose secrets earlier, or contradict the dialogue, thoughts or established facts.
+Do not change speech, thought, speaker, turn order or count. Narration precedes speech within each turn.
+Include narration-only turns and keep them nonempty. Other narrations may be null when appropriate.
+Return {"narrations":[null],"continuity_summary":"updated self-contained continuity summary, at most 1000 characters"}.
+The narrations array must correspond exactly to the supplied turns. Write the summary in English."""
 
-ALLOCATE = '''編集者として分量と重要性を比較して予算を再配分する。
-出力は {"budgets":[正整数,...],"reasons":["各対象の比較に基づく簡潔な編集理由",...]}。
-items順、各値はminimum以上、合計はtotalと一致。actual_turnsは参考値であり確定予算にコピーしない。
-初期予算、転換点、因果上の重み、会話・感情に必要な余地を比較し、圧縮・補強を判断する。
-予算だけを変更する。維持する場合も理由を書く。'''
-
-ACT = '''役者としてspeechとthoughtの表現だけを変える。
-脚本の重要な事実・質問・回答・約束・拒否・決定・因果を維持し、語彙・口調・間・感情・内面を人物らしく表現する。
-speaker・narration・順序・ターン数は変更しない。
-actor.initial_perceptionsは初期の主観。character_knowledgeで後から知った事実を優先する。
-acquired_factsは取得順。past_thoughtsは自分だけの思考。他者の内面は知らない。
-reference_materialは役者用の資料であり人物の知識ではない。未来の事実を先取りしない。'''
+TITLES = """You are a professional novelist. Based on story_synopsis and the ordered chapter_synopses,
+write the final story title and chapter titles in language. Respect requested_title when supplied,
+retaining it if already appropriate for the language, otherwise adapting it faithfully.
+Give the titles a coherent style and avoid unnecessary duplication. Return
+{"title":"story title","chapter_titles":["chapter title"]} with exactly one title per chapter in order."""

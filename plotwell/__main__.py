@@ -17,7 +17,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='階層的な物語・台本生成（OpenAI互換API）')
     parser.add_argument('plot', type=Path, nargs='?', help='入力plot JSON')
     parser.add_argument('--from-narrator', type=Path, help='確定原稿を持つ.logを再利用し、構成・執筆を行わない')
-    parser.add_argument('--acting-mode', choices=('A', 'B'), default='B')
+    parser.add_argument('--acting-mode', choices=('A',), default='A')
     parser.add_argument('--stop-after', choices=('narrator',), help='確定原稿の保存までで終了する')
     parser.add_argument('--output-dir', type=Path, default=Path('data'))
     parser.add_argument('--env', type=Path, default=Path('.env'))
@@ -56,7 +56,8 @@ def main(argv=None):
         else:
             story = pipeline.run(plot, args.acting_mode, stop_after_narrator=args.stop_after == 'narrator')
         atomic_json(log.output_path, story)
-        log.event('run_complete', output_path=str(log.output_path), total_turns=story['turn_budget'],
+        log.event('run_complete', output_path=str(log.output_path), total_turns=sum(len(s['turns']) for c in story['chapters'] for s in c['scenes']),
+                  target_turns=story['target_turns'],
                   llm_calls=getattr(llm, 'call_count', None), usage=getattr(llm, 'usage_totals', None))
         print(f'json: {log.output_path}', flush=True)
         return 0
